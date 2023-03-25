@@ -6,9 +6,10 @@ const host = process.env.HOST ?? 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3333;
 
 const app = express();
+let data = '';
 
 app.get('/', (req, res) => {
-  res.send({ message: 'Hello API' });
+  res.send({ message: data });
 });
 
 app.listen(port, host, () => {
@@ -22,7 +23,13 @@ app.listen(port, host, () => {
   const chunks = [];
   stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
   stream.on('end', () => {
-    const data = Buffer.concat(chunks).toString();
-    console.log(data);
+    data = Buffer.concat(chunks).toString();
+
+    const set = new Set(data);
+    const sorted = Array.from(set).sort((a, b) => (a < b ? -1 : 1));
+    const vocabSize = sorted.length;
+
+    console.log(sorted);
+    console.log(vocabSize);
   });
 });
