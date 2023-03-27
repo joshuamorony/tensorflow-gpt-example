@@ -1,15 +1,15 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import * as tf from '@tensorflow/tfjs-node';
 
 const host = process.env.HOST ?? 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3333;
 
 const app = express();
-let data = '';
 
 app.get('/', (req, res) => {
-  res.send({ message: data });
+  res.send({ message: { message: 'hello' } });
 });
 
 app.listen(port, host, () => {
@@ -23,9 +23,9 @@ app.listen(port, host, () => {
   const chunks = [];
   stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
   stream.on('end', () => {
-    data = Buffer.concat(chunks).toString();
+    const text = Buffer.concat(chunks).toString();
 
-    const set = new Set(data);
+    const set = new Set(text);
     const sorted = Array.from(set).sort((a, b) => (a < b ? -1 : 1));
     const vocabSize = sorted.length;
 
@@ -50,7 +50,8 @@ app.listen(port, host, () => {
       itos.set(index, value);
     }
 
-    console.log(encode('hii there'));
-    console.log(decode(encode('hii there')));
+    const data = tf.tensor1d(encode(text), 'int32');
+    console.log(data.shape, data.dtype);
+    console.log(data.slice(0, 1000).print());
   });
 });
