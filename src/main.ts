@@ -31,5 +31,26 @@ app.listen(port, host, () => {
 
     console.log(sorted);
     console.log(vocabSize);
+
+    // map characters to integers
+    const stoi = new Map<string, number>();
+    // map integers to characters
+    const itos = new Map<number, string>();
+
+    const encode = (val: string) => {
+      return Array.from(val).map((char) => stoi.get(char));
+    };
+
+    const decode = (val: number[]) => {
+      return val.map((encoded) => itos.get(encoded)).join('');
+    };
+
+    for (const [index, value] of sorted.entries()) {
+      stoi.set(value, index);
+      itos.set(index, value);
+    }
+
+    console.log(encode('hii there'));
+    console.log(decode(encode('hii there')));
   });
 });
