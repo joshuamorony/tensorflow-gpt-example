@@ -8,9 +8,9 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3333;
 
 const app = express();
 
-app.get('/', (req, res) => {
-  res.send({ message: { message: 'hello' } });
-});
+// app.get('/', (req, res) => {
+// res.send({});
+// });
 
 app.listen(port, host, () => {
   console.log(`[ ready ] http://${host}:${port}`);
@@ -53,5 +53,12 @@ app.listen(port, host, () => {
     const data = tf.tensor1d(encode(text), 'int32');
     console.log(data.shape, data.dtype);
     console.log(data.slice(0, 1000).print());
+
+    const trainLength = Math.floor(0.9 * data.size);
+    const trainData = data.slice(0, trainLength);
+    const validationData = data.slice(trainLength);
+
+    const contextLength = 8;
+    console.log(trainData.slice(0, contextLength + 1).print());
   });
 });
