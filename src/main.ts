@@ -116,10 +116,11 @@ app.listen(port, host, () => {
     const model = new BigramLanguageModel(vocabSize);
     const [logits, loss] = model.forward(contexts, targets);
 
-    // console.log(decode(model.generate(tf.zeros([1, 1]), 100)[0]));
-    // const idx = tf.zeros([1, 1], 'int32');
-    // const generated = model.generate(idx, 100).arraySync();
-    // console.log(decode(generated[0]));
+    // zeros here is (B, T)
+    // basically we will have [[0]] to kick off generation, 0 is space character - good starting point
+    const idx = tf.zeros([1, 1], 'int32');
+    const generated = model.generate(idx, 100).arraySync();
+    console.log(decode(generated[0]));
   });
 });
 
@@ -132,85 +133,33 @@ class BigramLanguageModel {
     });
   }
 
-  forward(idx, targets = null): [Tensor3D, number] {
-    const logits = this.tokenEmbeddingTable.apply(idx);
+  forward(idx, targets = null) {
+    // Both idx and targets are (B, T) tensors
+    const logits = this.tokenEmbeddingTable.apply(idx); // (B, T, C) e.g. (4, 8, 12)
 
     let loss = null;
 
     if (targets !== null) {
-      const [T, B, C] = logits.shape;
-      const logitsReshaped = logits.reshape([B * T, C]);
-      const targetsReshaped = targets.reshape([B * T]);
-
-      const oneHotLabels = tf.oneHot(
-        targetsReshaped,
-        logitsReshaped.shape[logitsReshaped.rank - 1]
-      );
-
-      loss = tf.losses.softmaxCrossEntropy(oneHotLabels, logitsReshaped);
-
-      // const oneHotLabels = tf.oneHot(targets, logits.shape[logits.rank - 1]);
-      // loss = tf.losses.softmaxCrossEntropy(oneHotLabels, logits);
+      const oneHotLabels = tf.oneHot(targets, logits.shape[logits.rank - 1]);
+      loss = tf.losses.softmaxCrossEntropy(oneHotLabels, logits);
     }
 
     return [logits, loss];
   }
 
   generate(idx, maxNewTokens) {
-    // for (let i = 0; i < maxNewTokens; i++) {
-    // // Get the predictions
-    // const [logits, loss] = this.forward(idx);
-    // console.log('logits');
-    // console.log(logits.print());
-    // // Split the logits tensor along the time axis
-    // const timeAxis = 1;
-    // const logitsSlices = tf.split(logits, logits.shape[timeAxis], timeAxis);
-    // console.log('slices');
-    // console.log(logitsSlices);
-    // // Focus only on the last time step
-    // const logitsLastStep = logitsSlices[logitsSlices.length - 1].reshape([
-    // logits.shape[0],
-    // logits.shape[2],
-    // ]);
-    // // Apply softmax to get probabilities
-    // const probs = logitsLastStep.softmax(-1);
-    // console.log('probs');
-    // console.log(probs.print());
-    // // Sample from the distribution
-    // // const idxNext = tf.multinomial(probs, 1);
-    // // console.log('next');
-    // // console.log(idxNext);
-    // // // Append sampled index to the running sequence
-    // // idx = tf.concat([idx, idxNext], 1);
-    // // console.log('new');
-    // // console.log(idx);
-    // }
-    // return idx;
-    // console.log('IDX');
-    // console.log(idx.print());
-    // for (let i = 0; i < maxNewTokens; i++) {
-    // // get predictions
-    // let [logits, loss] = this.forward(idx);
-    // console.log('preslice');
-    // console.log(logits.print());
-    // console.log(loss);
-    // // focus on last time step
-    // // TODO: check this - think this is incorrect for my setup
-    // logits = logits.slice([0, logits.shape[1] - 1, 0], [-1, 1, -1]); // becomes (B, C)
-    // console.log('sliced');
-    // console.log(logits.print());
-    // // apply softmax to get probabilities
-    // const probs = tf.softmax(logits, -1);
-    // console.log('probs');
-    // console.log(probs.print());
-    // // sample from distribution
-    // const idx_next = tf.multinomial(probs, 1);
-    // console.log('multinomial');
-    // console.log(idx_next.print());
-    // idx = tf.concat([idx, idx_next], 1); // (B, T+1)
-    // console.log('new');
-    // console.log(idx);
-    // }
-    // return idx;
+    for (let i = 0; i < maxNewTokens; i++) {
+      // get predictions
+      let [logits, loss] = this.forward(idx);
+
+      const lastTimeStep = logits
+        .slice([0, logits.shape[1] - 1, 0], [-1, 1, -1])
+        .reshape([-1, logits.shape[2]]);
+
+      const probs = tf.softmax(lastTimeStep, -1);
+      const idx_next = tf.multinomial(probs, 1);
+      idx = tf.concat([idx, idx_next], 1); // (B, T+1)
+    }
+    return idx;
   }
 }
