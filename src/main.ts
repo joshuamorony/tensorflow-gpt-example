@@ -63,7 +63,7 @@ app.listen(port, host, () => {
     const validationData = data.slice(trainLength);
 
     const blockSize = 8;
-    const batchSize = 4;
+    let batchSize = 4;
 
     const getBatch = (split: string) => {
       const batchData = split === 'train' ? trainData : validationData;
@@ -119,8 +119,100 @@ app.listen(port, host, () => {
     // zeros here is (B, T)
     // basically we will have [[0]] to kick off generation, 0 is space character - good starting point
     const idx = tf.zeros([1, 1], 'int32');
+    console.log('call generate');
     const generated = model.generate(idx, 100).arraySync();
     console.log(decode(generated[0]));
+
+    const optimiser = tf.train.adam(1e-3);
+
+    batchSize = 32;
+
+    // training loop
+    for (let i = 0; i < 100; i++) {
+      const { contexts, targets } = getBatch('train');
+
+      const [logits, loss] = model.forward(contexts, targets);
+
+      loss.backward();
+      // optimizer.applyGradients(grads); - think I have to do this, but where do i get gradients from?
+    }
+
+    // const computeGradients = (model, idx, targets) => {
+    // const [_, loss] = model.forward(idx, targets);
+    // const grads = tf.grads((idx, targets) => model.forward(idx, targets)[1])(
+    // idx,
+    // targets
+    // );
+
+    // return { grads: grads, loss: loss };
+    // };
+
+    // const computeGradients = (model, idx, targets) => {
+    // const [_, loss] = model.forward(idx, targets);
+    // const grads = tf.grads((idx, targets) => model.forward(idx, targets)[1])(
+    // idx,
+    // targets
+    // );
+
+    // // Map gradients to the trainable variables
+    // const namedGrads = {};
+    // model.tokenEmbeddingTable.trainableWeights.forEach((weight, i) => {
+    // namedGrads[weight.originalName] = grads[i];
+    // });
+
+    // return { grads: namedGrads, loss: loss };
+    // };
+
+    // const trainModel = async (
+    // model,
+    // data,
+    // targets,
+    // batchSize,
+    // epochs,
+    // learningRate
+    // ) => {
+    // // Create the Adam optimizer
+    // const optimizer = tf.train.adam(learningRate);
+
+    // // Training loop
+    // for (let epoch = 0; epoch < epochs; epoch++) {
+    // let batchStart = 0;
+    // let epochLoss = 0;
+
+    // while (batchStart < data.shape[0]) {
+    // const batchEnd = Math.min(batchStart + batchSize, data.shape[0]);
+    // const batchData = data.slice(batchStart, batchEnd - batchStart);
+    // const batchTargets = targets.slice(batchStart, batchEnd - batchStart);
+
+    // // Compute gradients and loss
+    // const { grads, loss } = computeGradients(
+    // model,
+    // batchData,
+    // batchTargets
+    // );
+    // epochLoss += loss.arraySync();
+
+    // // Apply gradients
+    // optimizer.applyGradients(grads);
+
+    // // Update batch start index for the next batch
+    // batchStart += batchSize;
+    // }
+
+    // console.log(`Epoch ${epoch + 1}: Loss = ${epochLoss}`);
+    // //
+    // }
+    // };
+
+    // const epochs = 10;
+    // const learningRate = 1e-3;
+
+    // // Train the model
+    // trainModel(model, data, targets, batchSize, epochs, learningRate).then(
+    // (result) => {
+    // console.log('hi');
+    // }
+    // );
   });
 });
 
