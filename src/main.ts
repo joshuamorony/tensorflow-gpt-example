@@ -124,95 +124,21 @@ app.listen(port, host, () => {
     console.log(decode(generated[0]));
 
     const optimiser = tf.train.adam(1e-3);
-
     batchSize = 32;
 
     // training loop
     for (let i = 0; i < 100; i++) {
       const { contexts, targets } = getBatch('train');
 
-      const [logits, loss] = model.forward(contexts, targets);
+      //TODO: what about the backward step?
 
-      loss.backward();
-      // optimizer.applyGradients(grads); - think I have to do this, but where do i get gradients from?
+      optimiser.minimize(() => {
+        const [logits, loss] = model.forward(contexts, targets);
+
+        console.log(loss.arraySync());
+        return loss;
+      });
     }
-
-    // const computeGradients = (model, idx, targets) => {
-    // const [_, loss] = model.forward(idx, targets);
-    // const grads = tf.grads((idx, targets) => model.forward(idx, targets)[1])(
-    // idx,
-    // targets
-    // );
-
-    // return { grads: grads, loss: loss };
-    // };
-
-    // const computeGradients = (model, idx, targets) => {
-    // const [_, loss] = model.forward(idx, targets);
-    // const grads = tf.grads((idx, targets) => model.forward(idx, targets)[1])(
-    // idx,
-    // targets
-    // );
-
-    // // Map gradients to the trainable variables
-    // const namedGrads = {};
-    // model.tokenEmbeddingTable.trainableWeights.forEach((weight, i) => {
-    // namedGrads[weight.originalName] = grads[i];
-    // });
-
-    // return { grads: namedGrads, loss: loss };
-    // };
-
-    // const trainModel = async (
-    // model,
-    // data,
-    // targets,
-    // batchSize,
-    // epochs,
-    // learningRate
-    // ) => {
-    // // Create the Adam optimizer
-    // const optimizer = tf.train.adam(learningRate);
-
-    // // Training loop
-    // for (let epoch = 0; epoch < epochs; epoch++) {
-    // let batchStart = 0;
-    // let epochLoss = 0;
-
-    // while (batchStart < data.shape[0]) {
-    // const batchEnd = Math.min(batchStart + batchSize, data.shape[0]);
-    // const batchData = data.slice(batchStart, batchEnd - batchStart);
-    // const batchTargets = targets.slice(batchStart, batchEnd - batchStart);
-
-    // // Compute gradients and loss
-    // const { grads, loss } = computeGradients(
-    // model,
-    // batchData,
-    // batchTargets
-    // );
-    // epochLoss += loss.arraySync();
-
-    // // Apply gradients
-    // optimizer.applyGradients(grads);
-
-    // // Update batch start index for the next batch
-    // batchStart += batchSize;
-    // }
-
-    // console.log(`Epoch ${epoch + 1}: Loss = ${epochLoss}`);
-    // //
-    // }
-    // };
-
-    // const epochs = 10;
-    // const learningRate = 1e-3;
-
-    // // Train the model
-    // trainModel(model, data, targets, batchSize, epochs, learningRate).then(
-    // (result) => {
-    // console.log('hi');
-    // }
-    // );
   });
 });
 
