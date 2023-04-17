@@ -30,9 +30,9 @@ app.listen(port, host, () => {
   const chunks = [];
   stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
   stream.on('end', () => {
-    // const text = Buffer.concat(chunks).toString();
+    const text = Buffer.concat(chunks).toString();
     // TODO: JUST testing
-    const text = 'Wherefore art thou Romeo';
+    // const text = 'Wherefore art thou Romeo';
 
     const set = new Set(text);
     const sorted = Array.from(set).sort((a, b) => (a < b ? -1 : 1));
@@ -63,7 +63,7 @@ app.listen(port, host, () => {
     const validationData = data.slice(trainLength);
 
     const blockSize = 8;
-    let batchSize = 4;
+    let batchSize = 32;
 
     const getBatch = (split: string) => {
       const batchData = split === 'train' ? trainData : validationData;
@@ -116,29 +116,46 @@ app.listen(port, host, () => {
     const model = new BigramLanguageModel(vocabSize);
     const [logits, loss] = model.forward(contexts, targets);
 
+    // original junk generation
     // zeros here is (B, T)
     // basically we will have [[0]] to kick off generation, 0 is space character - good starting point
-    const idx = tf.zeros([1, 1], 'int32');
-    console.log('call generate');
-    const generated = model.generate(idx, 100).arraySync();
-    console.log(decode(generated[0]));
+    // const idx = tf.zeros([1, 1], 'int32');
+    // console.log('call generate');
+    // const generated = model.generate(idx, 100).arraySync();
+    // console.log(decode(generated[0]));
 
     const optimiser = tf.train.adam(1e-3);
-    batchSize = 32;
 
     // training loop
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
       const { contexts, targets } = getBatch('train');
-
-      //TODO: what about the backward step?
 
       optimiser.minimize(() => {
         const [logits, loss] = model.forward(contexts, targets);
 
+        // show progression after each training loop
         console.log(loss.arraySync());
+        const idx = tf.zeros([1, 1], 'int32');
+        const generated = model.generate(idx, 200).arraySync();
+        console.log(decode(generated[0]));
+
         return loss;
       });
     }
+
+    // optimiser.getWeights().then((weights) => {
+    // const trainableWeights = model.tokenEmbeddingTable.trainableWeights;
+    // const weightTensors = [
+    // weights.slice(0, trainableWeights[0].shape.length),
+    // ];
+    // model.tokenEmbeddingTable.setWeights(weightTensors);
+
+    // // after training generation
+    // const idx = tf.zeros([1, 1], 'int32');
+    // console.log("training complete... let's generate some text!");
+    // const generated = model.generate(idx, 200).arraySync();
+    // console.log(decode(generated[0]));
+    // });
   });
 });
 
